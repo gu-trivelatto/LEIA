@@ -1,0 +1,37 @@
+[project]
+name = "labi-bot"
+version = "1.0.0"
+description = "Agente conversacional assitente de laboratório"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.116.1",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "python-dotenv>=1.1.1",
+    "requests>=2.32.5",
+    "colorama>=0.4.6",
+    "ruff>=0.13.1",
+    "langgraph>=0.6.6",
+    "langchain-community>=0.3.27",
+    "langchain-core>=0.3.75",
+    "google-ai-generativelanguage>=0.6.18",
+    "langchain-groq>=0.3.7",
+    "langgraph-checkpoint-postgres>=2.0.23",
+    "psycopg[binary]>=3.1",
+    "python-telegram-bot>=22.5",
+    "groq>=0.31.1",
+    "uvicorn>=0.37.0",
+]
+
+[tool.ruff]
+indent-width = 2
+line-length = 79
+
+[tool.ruff.lint.flake8-quotes]
+avoid-escape = false
+
+[tool.ruff.format]
+indent-style = "space"
+line-ending = "lf"
+quote-style = "double"

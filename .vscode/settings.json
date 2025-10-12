@@ -1,0 +1,35 @@
+{
+  "python.analysis.typeCheckingMode": "standard",
+  "editor.tabSize": 2,
+  "python.analysis.typeEvaluation.enableReachabilityAnalysis": true,
+  "python.analysis.typeEvaluation.enableTypeIgnoreComments": true,
+  "python.analysis.typeEvaluation.strictListInference": true,
+  "python.analysis.typeEvaluation.strictSetInference": true,
+  "python.analysis.useLibraryCodeForTypes": true,
+  "editor.rulers": [
+    79
+  ],
+  "isort.args": [
+    "--trailing-comma",
+    "--wrap-length=0",
+    "--multi-line=3",
+    "--multi-line=3",
+    "--force-grid-wrap=0",
+  ],
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "",
+      "depth": 10,
+      "includeAllSymbols": true
+    }
+  ],
+  "python.analysis.autoFormatStrings": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
+}

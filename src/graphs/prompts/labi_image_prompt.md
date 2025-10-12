@@ -1,0 +1,1 @@
+Gere uma breve interpretação da imagem em português.
