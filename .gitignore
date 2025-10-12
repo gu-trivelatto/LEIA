@@ -18,3 +18,4 @@ build/
 .langgraph/
 *.db*
 .gcloud/secret*
+setup_webhook.sh
