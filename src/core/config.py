@@ -14,10 +14,6 @@ class LLMSettings(BaseModel):
   TEMPERATURE: float = 0.7
   TIMEOUT: int = 30
   PROMPT_NAME: str
-  
-  
-class AudioModelSettings(LLMSettings):
-  pass
 
 
 class OmniModelSettings(LLMSettings):
@@ -25,9 +21,31 @@ class OmniModelSettings(LLMSettings):
   TOP_P: float = 1.0
 
 
+class TavilySettings(BaseModel):
+  API_KEY: SecretStr
+  MAX_RESULTS: int = 3
+  
+  
+class LlamaCloudSettings(BaseModel):
+  API_KEY: SecretStr
+
+
+class QdrantSettings(BaseModel):
+  API_KEY: SecretStr
+  URL: str
+  
+  
+class HuggingFaceSettings(BaseModel):
+  EMBEDDING_MODEL: str
+
+
 class MemorySettings(BaseModel):
   STRATEGY: Literal["postgres", "in_memory"] = "in_memory"
   DISABLE_MIGRATIONS: bool = True
+  URL: SecretStr
+  
+
+class ReadingsDatabaseSettings(BaseModel):
   URL: SecretStr
 
 
@@ -50,10 +68,15 @@ class Settings(BaseSettings):
   bot: BotSettings
   main_llm: LLMSettings
   formatter_llm: LLMSettings
-  audio_model: AudioModelSettings
+  audio_model: LLMSettings
   omni_model: OmniModelSettings
+  tavily: TavilySettings
+  llama_cloud: LlamaCloudSettings
+  qdrant: QdrantSettings
+  huggingface: HuggingFaceSettings
   memory: MemorySettings
   logger: LoggerSettings
+  readings_database: ReadingsDatabaseSettings
   security: SecuritySettings
 
   model_config = SettingsConfigDict(

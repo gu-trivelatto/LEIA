@@ -28,6 +28,7 @@ async def generate_and_send_response(
     )
     replies = [{"output": "Conversa reiniciada!"}]
   else:
+    logger.info(f"Invoking response generation graph for chat ID: {message.chat.id}")
     replies = await GraphService.invoke_response_generation_graph(
       graph,
       processed_input["chat_id"],
@@ -36,6 +37,11 @@ async def generate_and_send_response(
     )
   
   for reply in replies:
-    await bot.send_message(chat_id=processed_input["chat_id"], text=reply["output"])
+    if reply.get("output"):
+      logger.info(f"Sending message to chat ID {processed_input['chat_id']}")
+      await bot.send_message(chat_id=processed_input["chat_id"], text=reply["output"])
+    elif reply.get("filePath"):
+      logger.info(f"Sending image with path {reply['filePath']} to chat ID {processed_input['chat_id']}")
+      await bot.send_photo(chat_id=processed_input["chat_id"], photo=open(reply["filePath"], 'rb'))
   
   return

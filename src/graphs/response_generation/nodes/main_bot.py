@@ -3,6 +3,8 @@ from src.graphs.response_generation.schemas.MainState import MainState
 from src.graphs.llm.model import create_llm
 from src.core.prompt import PromptHandler
 from src.core.config import settings
+from src.graphs.response_generation.tools.DataAccess import DataAccess
+from src.graphs.response_generation.tools.WebSearch import WebSearch
 
 bot = create_react_agent(
   model=create_llm(
@@ -11,7 +13,10 @@ bot = create_react_agent(
     settings.main_llm.TEMPERATURE,
     settings.main_llm.TIMEOUT,
   ),
-  tools=[sum],
+  tools=[
+    DataAccess,
+    WebSearch,
+  ],
   name=settings.bot.NAME,
   prompt=PromptHandler().get_prompt(
     settings.main_llm.PROMPT_NAME

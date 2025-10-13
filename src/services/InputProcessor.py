@@ -1,18 +1,21 @@
 import logging
 import base64
-from telegram import Message, File
+import io
+from telegram import Message, Bot
+from src.graphs.llm.model import create_groq_client
 from src.core.config import settings
 from src.graphs.response_generation.schemas.MainState import InputState
 from src.core.prompt import PromptHandler
-from groq import Groq
 
 logger = logging.getLogger(__name__)
-client = Groq(api_key=settings.audio_model.API_KEY.get_secret_value())
+bot = Bot(token=settings.bot.TELEGRAM_TOKEN.get_secret_value())
 
-async def download_file(file_id: str, file_unique_id: str) -> bytearray:
+
+async def download_file(file_id: str) -> bytearray:
   try:
-    file = await File(file_id, file_unique_id).download_as_bytearray()
-    return file
+    file = await bot.get_file(file_id)
+    data = await file.download_as_bytearray()
+    return data
   except Exception as e:
     logger.error(f"Error downloading file {file_id}: {e}")
     return bytearray()
@@ -20,8 +23,13 @@ async def download_file(file_id: str, file_unique_id: str) -> bytearray:
 def transcribe_audio(audio: bytearray) -> str:
   try:
     logger.info(f"Transcribing audio of size: {len(audio)} bytes")
+    
+    client = create_groq_client(settings.audio_model.API_KEY)
+    audio_file = io.BytesIO(audio)
+    audio_file.name = "audio.ogg"
+    
     transcription = client.audio.transcriptions.create(
-      file=bytes(audio),
+      file=audio_file,
       model=settings.audio_model.MODEL,
       prompt=PromptHandler().get_prompt(
         settings.audio_model.PROMPT_NAME
@@ -47,6 +55,7 @@ def interpret_image(image: bytearray) -> str:
     
     logger.info(f"Image encoded to base64, length: {len(base64_image)} characters")
     
+    client = create_groq_client(settings.audio_model.API_KEY)
     completion = client.chat.completions.create(
       model=settings.omni_model.MODEL,
       messages=[
@@ -89,13 +98,13 @@ async def process_input(message: Message) -> InputState:
   if message.text:
     chat_input = message.text
   elif message.audio:
-    audio = await download_file(message.audio.file_id, message.audio.file_unique_id)
+    audio = await download_file(message.audio.file_id)
     chat_input = transcribe_audio(audio)
   elif message.voice:
-    voice = await download_file(message.voice.file_id, message.voice.file_unique_id)
+    voice = await download_file(message.voice.file_id)
     chat_input = transcribe_audio(voice)
   elif message.photo:
-    photo = await download_file(message.photo[-1].file_id, message.photo[-1].file_unique_id)
+    photo = await download_file(message.photo[-1].file_id)
     chat_input = interpret_image(photo)
   else:
     chat_input = "O usuário enviou um tipo de mensagem não suportado. Informe que apenas mensagens de texto, áudio e fotos são aceitas."

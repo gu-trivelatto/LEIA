@@ -2,6 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 
+from src.core.middleware import DBSessionMiddleware
 from src.api.routers import health
 from src.api.routers import bot
 from src.api.routers import telegram
@@ -52,6 +53,7 @@ app = FastAPI(
   redoc_url="/redoc",
 )
 
+app.add_middleware(DBSessionMiddleware)
 app.include_router(health.router, tags=["Health"])
 app.include_router(bot.router, prefix="/bot", tags=["Bot"])
 app.include_router(telegram.router, prefix="/telegram", tags=["Telegram"])
