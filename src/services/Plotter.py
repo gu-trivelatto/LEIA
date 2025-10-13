@@ -19,7 +19,7 @@ def plot_consumption_distribution(
       df, values='Consumo (kWh)', names='Tipo',
       title='Distribuição de Consumo por Tipo de Aparelho'
     )
-    plot_path = f"src/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
     logger.info(f"Saving plot to {plot_path}...")
     fig.write_image(plot_path)
     return plot_path
@@ -40,7 +40,7 @@ def plot_daily_consumption(
       markers=True
     )
     fig.update_layout(xaxis_title="Data", yaxis_title="Consumo Total (kWh)")
-    plot_path = f"src/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
     logger.info(f"Saving plot to {plot_path}...")
     fig.write_image(plot_path)
     return plot_path
@@ -61,7 +61,7 @@ def plot_power_outliers(
       points="all" # 'all' mostra todos os pontos, destacando outliers
     )
     fig.update_xaxes(tickangle=45)  # Rotaciona os nomes dos aparelhos para melhor leitura
-    plot_path = f"src/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
     logger.info(f"Saving plot to {plot_path}...")
     fig.write_image(plot_path)
     return plot_path
@@ -82,7 +82,7 @@ def plot_power_factor_analysis(
       trendline_color_override="red"
     )
     fig.update_yaxes(range=[0.5, 1.0]) # Fixa a escala do Fator de Potência
-    plot_path = f"src/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
     logger.info(f"Saving plot to {plot_path}...")
     fig.write_image(plot_path)
     return plot_path

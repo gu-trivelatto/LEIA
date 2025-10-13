@@ -19,3 +19,4 @@ build/
 *.db*
 .gcloud/secret*
 setup_webhook.sh
+data/plots/*.png
