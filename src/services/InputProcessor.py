@@ -111,9 +111,16 @@ async def process_input(message: Message) -> InputState:
     
   if message.caption:
     chat_input = f"{chat_input}\nLegenda: {message.caption}"
+  
+  user_name = "Desconhecido"
+  if message.from_user and message.from_user.first_name:
+    user_name = message.from_user.first_name
+    if message.from_user.last_name:
+      user_name += f" {message.from_user.last_name}" 
     
   return InputState(
     chat_input=chat_input,
     chat_id=chat_id,
     phone_number=phone_number,
+    user_name=user_name,
   )

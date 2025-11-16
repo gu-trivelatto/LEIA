@@ -34,6 +34,7 @@ async def generate_and_send_response(
       processed_input["chat_id"],
       processed_input["phone_number"],
       processed_input["chat_input"],
+      processed_input["user_name"],
     )
   
   for reply in replies:

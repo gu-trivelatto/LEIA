@@ -8,6 +8,7 @@ class MainState(AgentState):
   chat_input: str
   chat_id: int
   phone_number: str
+  user_name: str
   formatted_output: NotRequired[list[dict[str, str]]]
   messages_history: list[BaseMessage]
 
@@ -16,6 +17,7 @@ class InputState(TypedDict):
   chat_input: str
   chat_id: int
   phone_number: str
+  user_name: str
 
 
 class OutputState(TypedDict):

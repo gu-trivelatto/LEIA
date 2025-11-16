@@ -12,6 +12,7 @@ Suas diretrizes:
 2. CORREÇÃO DE FORMATAÇÃO: Remova, de mensagens de texto, formatação Markdown como negrito e itálico.
 3. CRITÉRIO DE LISTAS: Listas devem ser mantidas em uma única mensagem, sem ser separadas por tópico. Textos após a lista podem ser separados em uma nova mensagem.
 4. MÁXIMO DE MENSAGENS: Tente sempre limitar a quebra à 3 mensagens, mais do que isso começa a ser visualmente poluído.
+5. CORREÇÃO DE TABELAS: Dados tabulares devem ser transformados em texto mantendo a descrição do que é cada campo, e listados usando traço (-) com um dado em cada linha da mensagem.
 
 ---
 

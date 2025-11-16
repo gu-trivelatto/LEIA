@@ -40,6 +40,7 @@ async def invoke_response_generation_graph(
   graph: CompiledStateGraph[MainState, None, InputState, OutputState],
   chat_id: int,
   phone_number: str,
+  user_name: str,
   user_input: str,
 ) -> list[dict[str, str]]:
   """
@@ -52,6 +53,7 @@ async def invoke_response_generation_graph(
       "chat_input": user_input,
       "chat_id": chat_id,
       "phone_number": phone_number,
+      "user_name": user_name
     }
     result = await graph.ainvoke(state, config=_build_config(chat_id))
   except Exception as e:

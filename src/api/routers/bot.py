@@ -31,6 +31,7 @@ async def chat(request: Request, body: ChatRequest):
     body.chat_id,
     "",
     body.chat_input,
+    "Desconhecido"
   )
   return replies
 

@@ -19,6 +19,11 @@ class LLMSettings(BaseModel):
 class OmniModelSettings(LLMSettings):
   MAX_COMPLETION_TOKENS: int = 1024
   TOP_P: float = 1.0
+  
+
+class GoogleSheetsSettings(BaseModel):
+  SERVICE_ACCOUNT_KEY_PATH: str
+  SHEET_ID: str
 
 
 class TavilySettings(BaseModel):
@@ -70,6 +75,7 @@ class Settings(BaseSettings):
   formatter_llm: LLMSettings
   audio_model: LLMSettings
   omni_model: OmniModelSettings
+  google_sheets: GoogleSheetsSettings
   tavily: TavilySettings
   llama_cloud: LlamaCloudSettings
   qdrant: QdrantSettings
