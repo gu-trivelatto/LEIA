@@ -33,8 +33,8 @@ async def generate_and_send_response(
       graph,
       processed_input["chat_id"],
       processed_input["phone_number"],
-      processed_input["chat_input"],
       processed_input["user_name"],
+      processed_input["chat_input"],
     )
   
   for reply in replies:

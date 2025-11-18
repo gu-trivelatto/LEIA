@@ -15,7 +15,7 @@ async def main_bot(state: MainState) -> MainState:
   complete_prompt = PromptHandler().get_prompt(
     settings.main_llm.PROMPT_NAME
   )
-  complete_prompt += "\n\nO nome do usuário é: " + state.get("user_name", "Desconhecido")
+  complete_prompt += "\n\nO nome do usuário é: " + state["user_name"]
   complete_prompt += "\nA data e hora atual é: " + now + "\n"
   
   bot = create_react_agent(
