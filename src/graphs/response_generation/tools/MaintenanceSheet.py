@@ -1,213 +1,163 @@
 import logging
-from typing import Annotated, Literal
-import json
+from typing import Annotated, Literal, List, Dict, Any
 
-from src.core.config import settings
+from src.core.config import settings 
 from langchain_core.tools import tool
-from src.services.GoogleService import get_sheets_service 
+from src.services.GoogleService import get_sheets_service
 
 logger = logging.getLogger(__name__)
 
 SPREADSHEET_ID = settings.google_sheets.SHEET_ID
-SHEET_NAME = "Sheet1" 
-DATA_RANGE = f"{SHEET_NAME}!B3:H"
-INSERT_RANGE = f"{SHEET_NAME}!B:H" 
+SHEET_NAME = "Sheet1"
 HEADERS = ['Data', 'Equipamento', 'Descrição', 'Custo', 'Profissional', 'Responsável', 'Agendada']
-# ---------------------------------------------
+DATA_RANGE = f"{SHEET_NAME}!B3:H"
+INSERT_RANGE = f"{SHEET_NAME}!B:H"
 
+# --- FUNÇÕES AUXILIARES ---
+
+def _fetch_all_records(service) -> List[Dict[str, str]]:
+  """Busca e estrutura todos os dados da planilha."""
+  try:
+    result = service.spreadsheets().values().get(
+      spreadsheetId=SPREADSHEET_ID, range=DATA_RANGE
+    ).execute()
+    rows = result.get('values', [])
+    
+    structured_data = []
+    for row in rows:
+      # Preenche colunas faltantes para evitar erros de index
+      padded_row = row + [""] * (len(HEADERS) - len(row))
+      record = {header: val for header, val in zip(HEADERS, padded_row)}
+      structured_data.append(record)
+        
+    return structured_data
+  except Exception as e:
+    logger.error(f"Erro ao buscar registros: {e}")
+    return []
+
+def _format_as_markdown_table(records: List[Dict[str, Any]]) -> str:
+  """Converte lista de dicts em tabela Markdown."""
+  if not records:
+    return "Nenhum registro encontrado."
+  
+  markdown = "| " + " | ".join(HEADERS) + " |\n"
+  markdown += "| " + " | ".join(["---"] * len(HEADERS)) + " |\n"
+  
+  for rec in records:
+    row_values = [str(rec.get(h, "")) for h in HEADERS]
+    markdown += "| " + " | ".join(row_values) + " |\n"
+      
+  return markdown
+
+def _filter_by_device(records: List[Dict], device_query: str) -> List[Dict]:
+  """Filtra registros pelo nome do equipamento (case insensitive)."""
+  query = device_query.lower().strip()
+  return [r for r in records if query in r.get('Equipamento', '').lower()]
+
+# --- TOOL PRINCIPAL ---
 
 @tool(
   name_or_callable="MaintenanceSheet",
-  description="""Você deve chamar essa função caso o usuário solicite informações
-  sobre a planilha de manutenção, como detalhes de manutenção, histórico de
-  manutenção, ou qualquer informação relacionada à manutenção dos equipamentos.
-  Esta função também é responsável por inserir novos registros de manutenção
-  na planilha quando solicitado pelo usuário. Para criação, se a manutenção for
-  agendada, não é necessário informar preço nem trabalhador.""",
+  description="""
+  Gerenciador da Planilha de Manutenção.
+  
+  Ações disponíveis:
+  - 'get_last_maintenances': Histórico geral (use 'limit' para definir a qtd).
+  - 'get_device_maintenances': Histórico completo de um equipamento.
+  - 'get_scheduled_maintenances': Lista apenas manutenções futuras/agendadas.
+  - 'insert_maintenance_record': Insere novo registro.
+  
+  Notas:
+  - Para buscar agendamentos de um item específico, use 'get_scheduled_maintenances' + 'device'.
+  """
 )
 async def MaintenanceSheet(
   action: Annotated[
     Literal[
       "get_last_maintenances",
-      "get_maintenances_by_device",
       "get_device_maintenances",
+      "get_scheduled_maintenances",
       "insert_maintenance_record",
     ],
-    "Este campo identifica a ação específica que você deseja realizar.",
+    "A ação a ser realizada na planilha.",
   ],
-  date: Annotated[
-    str,
-    """A data da manutenção no formato 'DD/MM/YYYY'. Use este campo ao inserir
-    um novo registro de manutenção.""",
-  ] = "",
-  device: Annotated[
-    str,
-    "O nome ou identificador do dispositivo relacionado à manutenção. Use este campo ao inserir ou consultar registros de manutenção específicos de um dispositivo.",
-  ] = "",
-  details: Annotated[
-    str,
-    "Detalhes ou descrição da manutenção realizada. Use este campo ao inserir um novo registro de manutenção.",
-  ] = "",
-  worker: Annotated[
-    str,
-    "O nome do trabalhador responsável pela manutenção. Use este campo ao inserir um novo registro de manutenção.",
-  ] = "",
-  responsible: Annotated[
-    str,
-    "O nome do responsável pela manutenção. Use este campo ao inserir um novo registro de manutenção.",
-  ] = "",
-  price: Annotated[
-    float,
-    "O custo associado à manutenção. Use este campo ao inserir um novo registro de manutenção.",
-  ] = 0.0,
-  scheduled: Annotated[
-    bool,
-    "Indica se a manutenção foi agendada. Use este campo ao inserir um novo registro de manutenção.",
-  ] = False,
+  date: Annotated[str, "Data (DD/MM/YYYY). Obrigatório p/ inserir."] = "",
+  device: Annotated[str, "Equipamento. Obrigatório p/ busca específica ou insert."] = "",
+  details: Annotated[str, "Descrição do serviço."] = "",
+  worker: Annotated[str, "Nome do técnico."] = "",
+  responsible: Annotated[str, "Nome do responsável interno."] = "",
+  price: Annotated[float, "Custo (apenas números)."] = 0.0,
+  scheduled: Annotated[bool, "True para agendamento futuro, False se já realizado."] = False,
+  limit: Annotated[int, "Qtd de registros (apenas para get_last_maintenances)."] = 5,
 ) -> str:
-  """Implementa as funcionalidades de leitura e escrita na planilha de manutenção."""
+    
+  logger.info(f"MaintenanceSheet called: action={action}, device={device}")
   
   sheets_service = get_sheets_service()
-
-  if sheets_service is None:
-    logger.error("Google Sheets service is not initialized.")
-    return "Erro: o serviço do Google Sheets não está disponível no momento."
-  
-  sheet = sheets_service.spreadsheets()
-  
-  logger.debug(f"Selected action: {action}")
+  if not sheets_service:
+    return "Erro Técnico: Serviço Google Sheets indisponível."
 
   try:
+    # --- ESCRITA ---
     if action == "insert_maintenance_record":
-      if not responsible:
-        return "Erro: O responsável é obrigatório para inserir um registro de manutenção."
-      
-      logger.debug(f"New record: date={date}, device={device}, details={details}, price={price}, worker={worker}, responsible={responsible}, scheduled={scheduled}")
+      if not device or not responsible or not date:
+        return "Erro: 'device', 'responsible' e 'date' são obrigatórios."
 
-      formatted_price = f"R$ {price:,.2f}".replace('.', '#').replace(',', '.').replace('#', ',')
-      scheduled_text = "Sim" if scheduled else "Não"
+      formatted_price = f"R$ {price:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+      scheduled_str = "Sim" if scheduled else "Não"
       
-      new_record = [
-        f"{date}",
-        device,
-        details,
-        formatted_price,
-        worker,
-        responsible,
-        scheduled_text
-      ]
+      new_row = [date, device, details, formatted_price, worker, responsible, scheduled_str]
 
-      result = sheet.values().append(
+      sheets_service.spreadsheets().values().append(
         spreadsheetId=SPREADSHEET_ID,
         range=INSERT_RANGE,
         valueInputOption="USER_ENTERED",
         insertDataOption="INSERT_ROWS",
-        body={'values': [new_record]}
+        body={'values': [new_row]}
       ).execute()
 
-      logger.debug(f"Insert result: {result}")
+      return f"✅ Sucesso: Manutenção para '{device}' registrada (Data: {date})."
 
-      return f"Registro de manutenção para '{device}' inserido com sucesso na linha {result.get('updates').get('updatedRange').split('!')[1].split(':')[0].replace(SHEET_NAME, '')}."
+    # --- LEITURA ---
+    all_records = _fetch_all_records(sheets_service)
+    if not all_records: return "A planilha está vazia."
+
+    if action == "get_last_maintenances":
+      safe_limit = max(1, limit)
+      last_records = all_records[-safe_limit:]
+      return f"Últimos {len(last_records)} registros:\n\n{_format_as_markdown_table(last_records)}"
+
+    elif action == "get_device_maintenances":
+      if not device:
+        unique = sorted(list(set(r['Equipamento'] for r in all_records if r['Equipamento'])))
+        return f"⚠️ Especifique o equipamento. Opções:\n" + "\n".join([f"- {d}" for d in unique])
+      
+      filtered = _filter_by_device(all_records, device)
+      if not filtered: return f"Nenhum registro para '{device}'."
+      return f"Histórico completo de **{device}**:\n\n{_format_as_markdown_table(filtered)}"
+
+    elif action == "get_scheduled_maintenances":
+      scheduled_list = [
+        r for r in all_records 
+        if r.get('Agendada', '').strip().lower() == 'sim'
+      ]
+
+      if not scheduled_list:
+        return "Não há nenhuma manutenção agendada no momento."
+
+      if device:
+        scheduled_list = _filter_by_device(scheduled_list, device)
+        if not scheduled_list:
+          return f"Não há manutenções agendadas especificamente para '{device}'."
+        msg_prefix = f"Manutenções agendadas para **{device}**:"
+      else:
+        msg_prefix = "Todas as manutenções agendadas:"
+
+      return f"{msg_prefix}\n\n{_format_as_markdown_table(scheduled_list)}"
 
     else:
-      result = sheet.values().get(
-        spreadsheetId=SPREADSHEET_ID, 
-        range=DATA_RANGE,
-      ).execute()
-      
-      values = result.get('values', [])
-      
-      if not values:
-        logger.info("No maintenance records found.")
-        return "Não foram encontrados registros de manutenção."
-      
-      records = []
-      for row in values:
-        if len(row) >= len(HEADERS):
-          record = dict(zip(HEADERS, row[:len(HEADERS)]))
-          records.append(record)
-
-      if action == "get_last_maintenances":
-        last_records = records[-5:]
-        
-        logger.debug(f"Last records: {last_records}")
-        
-        response = f"Os últimos 5 registros de manutenção são:\n"
-        for r in last_records:
-          response += f"- {r['Equipamento']} no dia {r['Data']} | {r['Descrição']} | Responsável: {r['Responsável']} | Profissional: {r['Profissional']} | {r['Custo']} | Agendada? {r['Agendada']}\n"
-        
-        return response
-
-      elif action == "get_maintenances_by_device":
-        if not records:
-          return "Não há registros para agrupar."
-
-        grouped_maintenances = {}
-        
-        for record in records:
-          device_name = record.get('Equipamento')
-          maintenance_date = record.get('Data')
-          
-          if device_name and maintenance_date:
-            if device_name not in grouped_maintenances:
-              grouped_maintenances[device_name] = []
-            
-            grouped_maintenances[device_name].append(maintenance_date)
-            
-        logger.debug(f"Grouped maintenances: {grouped_maintenances}")
-        
-        maintenance_list = []
-        for device, dates in grouped_maintenances.items():
-          maintenance_list.append({
-            "nome": device,
-            "data_manutencao": dates
-          })
-
-        return json.dumps(maintenance_list, ensure_ascii=False, indent=2)
-      
-      elif action == "get_device_maintenances":
-        if not device:
-          logger.debug("No device specified, listing unique devices.")
-          
-          unique_devices = sorted(list(set(r.get('Equipamento') for r in records if r.get('Equipamento'))))
-          
-          logger.debug(f"Unique devices: {unique_devices}")
-          
-          if not unique_devices:
-              return "Não foi possível identificar equipamentos únicos para consulta."
-
-          response = "O nome do dispositivo não foi fornecido. Dispositivos disponíveis para consulta:\n- "
-          response += "\n- ".join(unique_devices)
-          
-          return response
-        
-        device_name = device.strip().lower()
-        
-        filtered_records = [
-          r for r in records 
-          if device_name in r.get('Equipamento', '').lower()
-        ]
-        
-        logger.debug(f"Filtered records for device '{device}': {filtered_records}")
-
-        if not filtered_records:
-          return f"Nenhum registro encontrado para o equipamento '{device}'."
-        
-        response = f"Histórico de manutenção para o equipamento '{device}':\n"
-        for r in filtered_records:
-          response += (
-            f"- Data: {r.get('Data', 'N/A')} | "
-            f"Descrição: {r.get('Descrição', 'N/A')} | "
-            f"Custo: {r.get('Custo', 'N/A')} | "
-            f"Profissional: {r.get('Profissional', 'N/A')} | "
-            f"Agendada: {r.get('Agendada', 'N/A')}\n"
-          )
-        
-        return response
-            
-      else:
-        return "Ação não reconhecida. Use 'get_last_maintenances', 'get_maintenances_by_device', 'get_device_maintenances' ou 'insert_maintenance_record'."
+      return f"Ação '{action}' desconhecida."
 
   except Exception as e:
-    logger.error(f"Erro ao interagir com o Google Sheets: {e}", exc_info=True)
-    return f"Erro interno ao processar a solicitação: {e}"
+    logger.error(f"Erro na MaintenanceSheet: {e}", exc_info=True)
+    return f"Ocorreu um erro: {str(e)}"

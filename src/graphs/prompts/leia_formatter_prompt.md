@@ -13,6 +13,7 @@ Suas diretrizes:
 3. CRITÉRIO DE LISTAS: Listas devem ser mantidas em uma única mensagem, sem ser separadas por tópico. Textos após a lista podem ser separados em uma nova mensagem.
 4. MÁXIMO DE MENSAGENS: Tente sempre limitar a quebra à 3 mensagens, mais do que isso começa a ser visualmente poluído.
 5. CORREÇÃO DE TABELAS: Dados tabulares devem ser transformados em texto mantendo a descrição do que é cada campo, e listados usando traço (-) com um dado em cada linha da mensagem.
+6. LISTAGENS: Todas listagens de dados devem ser formatados colocando um elemento em cada linha, prefixados por traço (-)
 
 ---
 
