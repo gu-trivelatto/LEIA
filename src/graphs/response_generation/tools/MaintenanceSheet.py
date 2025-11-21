@@ -2,7 +2,7 @@ import logging
 from typing import Annotated, Literal
 import json
 
-from core.config import settings
+from src.core.config import settings
 from langchain_core.tools import tool
 from src.services.GoogleService import get_sheets_service 
 

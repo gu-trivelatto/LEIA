@@ -1,159 +1,210 @@
+import sqlite3
 import logging
-
-from datetime import datetime, timedelta
-from typing import Literal, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import String, select, func
-from src.models.Devices import (
-  Devices,
-)
-from src.models.Measurements import (
-  Measurements,
-)
-from src.core.readings_database import get_db_session
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
-async def get_consumption_distribution(
-  period: Literal["yesterday", "last_week", "last_month"]
-) -> dict[str, float | str]:
-  """
-  Retorna o consumo total de energia por categoria em um determinado período.
-  """
-  logger.info(f"Fetching consumption distribution for period: {period}")
-  db_session: None | AsyncSession = None
-  try:
-    # Define o intervalo de datas conforme o período
-    # TODO usar a data atual quando tivermos dados atualizados
-    end = datetime(2025, 9, 15)
-    if period == "last_month":
-      start = (end - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif period == "last_week":
-      start = (end - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-      # Fallback leva todos para ontem
-      start = (end - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-      end = start.replace(hour=23, minute=59, second=59)
+class DataAccessRepository:
+  def __init__(self, db_path="laboratorio_mock.db"):
+    self.db_path = db_path
 
-    db_session = get_db_session()
-    stmt = (
-      select(Devices.type, func.sum(Measurements.active_power).label("total_active_power"))
-      .join(Measurements, Devices.id == Measurements.device_id)
-      .where(Measurements.timestamp.between(start, end))
-      .group_by(Devices.type)
-    )
-    rows = (await db_session.execute(stmt)).fetchall()
+  def _get_conn(self):
+    conn = sqlite3.connect(self.db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+  def _get_time_filter(self, periodo):
+    """
+    Traduz strings amigáveis em cláusulas SQL WHERE.
+    """
+    filtros = {
+      "ultimos_30_dias": "timestamp >= datetime('now', '-30 days')",
+      "ultimos_7_dias":  "timestamp >= datetime('now', '-7 days')",
+      "ultimos_3_dias":  "timestamp >= datetime('now', '-3 days')",
+      "ontem":           "date(timestamp) = date('now', '-1 day')",
+      "hoje":            "date(timestamp) = date('now')",
+      "semana_passada":  "strftime('%W', timestamp) = strftime('%W', 'now', '-7 days') AND strftime('%Y', timestamp) = strftime('%Y', 'now')",
+      "mes_passado":     "strftime('%Y-%m', timestamp) = strftime('%Y-%m', 'now', 'start of month', '-1 month')",
+      "tudo":            "1=1" # Traz tudo sem filtro
+    }
     
-    if not rows:
-      logger.info("No consumption data found for the given period.")
-      return {"error": "Não há dados disponíveis para o período informado."}
+    if periodo not in filtros:
+      error_msg = f"Período '{periodo}' inválido. Opções: {list(filtros.keys())}"
+      logger.error(error_msg)
+      return error_msg
+        
+    return filtros[periodo]
+
+  # =================================================================
+  # Consumo Acumulado (Energia Ativa)
+  # =================================================================
+  def get_consumo_total_kwh(self, periodo="ultimos_30_dias"):
+    """
+    Retorna o consumo total em kWh por fase.
+    Cálculo: Soma(Power kW) * (5min / 60min)
+    """
+    logger.info(f"Calculating consumo total kWh for period: {periodo}")
+    where_clause = self._get_time_filter(periodo)
+    query = f"""
+      SELECT 
+        sensor as fase,
+        ROUND(SUM(power) / 12.0, 2) as total_kwh,
+        ROUND(MIN(power), 2) as min_demand_kw,
+        ROUND(MAX(power), 2) as max_demand_kw
+      FROM medicoes
+      WHERE {where_clause}
+      GROUP BY sensor
+    """
     
-    logger.info(f"{len(rows)} consumption records found.")
+    with self._get_conn() as conn:
+      cursor = conn.execute(query)
+      return [dict(row) for row in cursor.fetchall()]
 
-    # Retorna como dicionário: {tipo: consumo_total}
-    return {row.type: row.total_active_power / 60.0 for row in rows}
-  except Exception as e:
-    logger.error(f"Erro ao buscar distribuição de consumo: {e}")
-    return {"error": "Não foi possível buscar a distribuição de consumo."}
-  
-async def get_daily_consumption(
-  period: Literal["last_week", "last_month", "last_year"]
-) -> dict[str, list[tuple[str, float]] | str]:
-  logger.info(f"Fetching daily consumption for period: {period}")
-  try:
-    # TODO usar a data atual quando tivermos dados atualizados
-    end = datetime(2025, 9, 15)
-    if period == "last_month":
-      delta = 30
-    elif period == "last_year":
-      delta = 365
-    else:
-      # Fallback leva todos para a última semana
-      delta = 7
-    start = (end - timedelta(days=delta)).replace(hour=0, minute=0, second=0, microsecond=0)
-    db_session = get_db_session()
-    stmt = (
-      select(
-        func.cast(func.date_trunc('day', Measurements.timestamp), String).label("consumption_day"),
-        func.sum(Measurements.active_power / 60.0).label("total_kwh")
+  # =================================================================
+  # Picos de Demanda (Momentos Críticos)
+  # =================================================================
+  def get_picos_demanda(self, periodo="ultimos_7_dias"):
+    """
+    Identifica o momento exato da maior potência registrada em cada fase.
+    """
+    logger.info(f"Calculating picos de demanda for period: {periodo}")
+    where_clause = self._get_time_filter(periodo)
+    query = f"""
+      SELECT 
+        m1.sensor as fase,
+        m1.power as pico_kw,
+        m1.timestamp as momento
+      FROM medicoes m1
+      WHERE m1.power = (
+        SELECT MAX(m2.power) 
+        FROM medicoes m2 
+        WHERE m2.sensor = m1.sensor 
+        AND {where_clause}
       )
-      .where(Measurements.timestamp.between(start, end))
-      .group_by("consumption_day")
-      .order_by("consumption_day")
-    )
-    rows = (await db_session.execute(stmt)).fetchall()
-    if not rows:
-      logger.info("No daily consumption data found for the given period.")
-      return {"error": "Não há dados disponíveis para o período informado."}
-    logger.info(f"{len(rows)} daily consumption records found.")
-    data = [tuple(row) for row in rows]
-    return {"data": data}
-  except Exception as e:
-    logger.error(f"Erro ao buscar consumo diário: {e}")
-    return {"error": "Não foi possível buscar o consumo diário."}
+      AND {where_clause}
+      GROUP BY m1.sensor -- Garante um por fase se houver empate
+      ORDER BY m1.sensor
+    """
+    
+    with self._get_conn() as conn:
+      cursor = conn.execute(query)
+      return [dict(row) for row in cursor.fetchall()]
 
-async def get_power_readings_by_device(
-  period: Literal["yesterday", "last_week"]
-) -> dict[str, list[tuple[str, float]] | str]:
-  logger.info(f"Fetching power readings by device for period: {period}")
-  try:
-    # TODO usar a data atual quando tivermos dados atualizados
-    end = datetime(2025, 9, 15)
-    if period == "last_week":
-      start = (end - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-      # Fallback leva todos para ontem
-      start = (end - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-      end = start.replace(hour=23, minute=59, second=59)
-    db_session = get_db_session()
-    stmt = (
-      select(Devices.name, Measurements.active_power)
-      .join(Measurements, Devices.id == Measurements.device_id)
-      .where(Measurements.timestamp.between(start, end))
-    )
-    rows = (await db_session.execute(stmt)).fetchall()
-    if not rows:
-      logger.info("No power readings found for the given period.")
-      return {"error": "Não há dados disponíveis para o período informado."}
-    logger.info(f"{len(rows)} power readings found.")
-    data = [tuple(row) for row in rows]
-    return {"data": data}
-  except Exception as e:
-    logger.error(f"Erro ao buscar leituras de potência: {e}")
-    return {"error": "Não foi possível buscar as leituras de potência."}
+  # =================================================================
+  # Saúde Elétrica (Fator de Potência)
+  # =================================================================
+  def get_saude_eletrica(self, periodo="ultimos_30_dias"):
+    """
+    Calcula Fator de Potência Médio e Voltagem Média.
+    FP = P / Sqrt(P² + Q²)
+    """
+    logger.info(f"Calculating saúde elétrica for period: {periodo}")
+    where_clause = self._get_time_filter(periodo)
+    query = f"""
+      SELECT 
+        sensor as fase,
+        ROUND(AVG(voltage), 1) as voltagem_media,
+        ROUND(AVG(
+          CASE WHEN power = 0 THEN 0 
+          ELSE power / SQRT((power*power) + (reactivePower*reactivePower)) 
+          END
+        ), 3) as fator_potencia_medio
+      FROM medicoes
+      WHERE {where_clause}
+      GROUP BY sensor
+    """
+    
+    with self._get_conn() as conn:
+      cursor = conn.execute(query)
+      return [dict(row) for row in cursor.fetchall()]
 
-async def get_power_factor_analysis(
-  device_id: int,
-  period: Literal["last_week", "last_month"]
-) -> dict[str, list[tuple[str, float, str]] | str]:
-  logger.info(f"Fetching power factor analysis for device_id: {device_id}, period: {period}")
-  try:
-    # TODO usar a data atual quando tivermos dados atualizados
-    end = datetime(2025, 9, 15)
-    if period == "last_month":
-      delta = 30
-    else:
-      # Fallback leva todos para a última semana
-      delta = 7
-    start = (end - timedelta(days=delta)).replace(hour=0, minute=0, second=0, microsecond=0)
-    end = end
-    db_session = get_db_session()
-    stmt = (
-      select(Measurements.active_power, Measurements.power_factor, Devices.name)
-      .join(Devices, Devices.id == Measurements.device_id)
-      .where(
-        Measurements.device_id == device_id,
-        Measurements.timestamp.between(start, end)
-      )
-    )
-    rows = (await db_session.execute(stmt)).fetchall()
-    if not rows:
-      logger.info("No power factor analysis data found for the given device and period.")
-      return {"error": "Não há dados disponíveis para o período informado."}
-    logger.info(f"{len(rows)} power factor analysis records found.")
-    data = [tuple(row) for row in rows]
-    return {"data": data}
-  except Exception as e:
-    logger.error(f"Erro ao buscar análise do fator de potência: {e}")
-    return {"error": "Não foi possível buscar a análise do fator de potência."}
+  # =================================================================
+  # Perfil Horário (Mapa de Calor)
+  # =================================================================
+  def get_perfil_horario(self, periodo="ultimos_30_dias"):
+    """
+    Agrega o consumo médio por hora do dia (00:00 a 23:00).
+    Útil para identificar desperdício noturno ou picos de almoço.
+    """
+    logger.info(f"Calculating perfil horário for period: {periodo}")
+    where_clause = self._get_time_filter(periodo)
+    query = f"""
+      SELECT 
+        strftime('%H', timestamp) || ':00' as hora,
+        ROUND(AVG(CASE WHEN sensor = 'fase1' THEN power END), 2) as media_kw_f1,
+        ROUND(AVG(CASE WHEN sensor = 'fase2' THEN power END), 2) as media_kw_f2,
+        ROUND(AVG(CASE WHEN sensor = 'fase3' THEN power END), 2) as media_kw_f3,
+        ROUND(AVG(power), 2) as media_geral_kw
+      FROM medicoes
+      WHERE {where_clause}
+      GROUP BY 1
+      ORDER BY 1
+    """
+    
+    with self._get_conn() as conn:
+      cursor = conn.execute(query)
+      return [dict(row) for row in cursor.fetchall()]
+
+  # =================================================================
+  # Desbalanceamento de Fases
+  # =================================================================
+  def get_desbalanceamento(self, periodo="ontem"):
+    """
+    Verifica se as fases estão carregadas de forma desigual (Ampere).
+    """
+    logger.info(f"Calculating desbalanceamento for period: {periodo}")
+    where_clause = self._get_time_filter(periodo)
+    query = f"""
+      SELECT 
+        ROUND(AVG(CASE WHEN sensor = 'fase1' THEN current END), 2) as avg_amp_f1,
+        ROUND(AVG(CASE WHEN sensor = 'fase2' THEN current END), 2) as avg_amp_f2,
+        ROUND(AVG(CASE WHEN sensor = 'fase3' THEN current END), 2) as avg_amp_f3,
+        ROUND(
+          (MAX(AVG(CASE WHEN sensor = 'fase1' THEN current END), 
+            AVG(CASE WHEN sensor = 'fase2' THEN current END), 
+            AVG(CASE WHEN sensor = 'fase3' THEN current END)) 
+          - 
+          MIN(AVG(CASE WHEN sensor = 'fase1' THEN current END), 
+            AVG(CASE WHEN sensor = 'fase2' THEN current END), 
+            AVG(CASE WHEN sensor = 'fase3' THEN current END)))
+        , 2) as diferenca_max_amperes
+      FROM medicoes
+      WHERE {where_clause}
+    """
+    
+    with self._get_conn() as conn:
+      cursor = conn.execute(query)
+      return [dict(row) for row in cursor.fetchall()]
+
+  # =================================================================
+  # Detecção de Anomalias (Voltagem)
+  # =================================================================
+  def get_anomalias_voltagem(self, periodo="ultimos_7_dias", limite_inf=198, limite_sup=242):
+    """
+    Retorna lista de eventos onde a voltagem saiu da zona segura.
+    Também calcula a % de desvio.
+    """
+    logger.info(f"Calculating anomalias de voltagem for period: {periodo}")
+    where_clause = self._get_time_filter(periodo)
+    query = f"""
+      SELECT 
+        timestamp,
+        sensor,
+        voltage,
+        CASE 
+          WHEN voltage > {limite_sup} THEN 'ALTA' 
+          WHEN voltage < {limite_inf} THEN 'BAIXA' 
+        END as tipo,
+        ROUND(((voltage - 220) / 220.0) * 100, 1) as desvio_pct
+      FROM medicoes
+      WHERE (voltage > {limite_sup} OR voltage < {limite_inf})
+      AND voltage > 5 -- Ignora desligamentos totais
+      AND {where_clause}
+      ORDER BY timestamp DESC
+      LIMIT 50
+    """
+    
+    with self._get_conn() as conn:
+      cursor = conn.execute(query)
+      return [dict(row) for row in cursor.fetchall()]

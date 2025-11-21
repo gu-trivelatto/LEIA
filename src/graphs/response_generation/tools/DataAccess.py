@@ -1,157 +1,166 @@
 import logging
-
 from langchain_core.tools import tool
 from typing import Annotated, Literal, cast
 
-from src.repositories.DataAccessRepository import (
-  get_consumption_distribution,
-  get_daily_consumption,
-  get_power_readings_by_device,
-  get_power_factor_analysis
-)
+# Importando suas classes e funções criadas anteriormente
+from src.repositories.DataAccessRepository import DataAccessRepository
 from src.services.Plotter import (
-  plot_consumption_distribution,
-  plot_daily_consumption,
-  plot_power_outliers,
-  plot_power_factor_analysis
+  plot_consumo_total_kwh,
+  plot_picos_demanda,
+  plot_saude_eletrica,
+  plot_perfil_horario,
+  plot_desbalanceamento,
+  plot_anomalias_voltagem
 )
 
 logger = logging.getLogger(__name__)
 
+# Instância global do monitor (ou poderia ser injetada)
+monitor = DataAccessRepository("laboratorio_mock.db")
 
 @tool(
   name_or_callable="DataAccess",
-  description="""Você deve chamar essa função para acessar dados históricos de
-  consumo de energia, como consumo diário, distribuição de consumo por tipo de
-  aparelho, leituras de potência por aparelho, análise do fator de potência e
-  detecção de outliers. Os períodos suportados para cada uma das ações são:
-  - get_consumption_distribution: 'yesterday', 'last_week', 'last_month'
-  - get_daily_consumption: 'last_week', 'last_month', 'last_year'
-  - get_power_readings_by_device: 'yesterday', 'last_week'
-  - get_power_factor_analysis: 'last_week', 'last_month'
-  A lista de dispositivos é a seguinte, onde M é monitor, C é computador,
-  R é roteador, P é projetor e A é ar-condicionado:
-  - C1: 1; C2: 3; C3: 5; C4: 7; C5: 9; C6: 11; C7: 13; C8: 15; C9: 17; C10: 19; C11: 21; C12: 23
-  - M1: 2; M2: 4; M3: 6; M4: 8; M5: 10; M6: 12; M7: 14; M8: 16; M9: 18; M10: 20; M11: 22; M12: 24
-  - R1: 25
-  - P1: 26
-  - A1: 27; A2: 28 """,
+  description="""
+  ACESSO A DADOS ELÉTRICOS DO LABORATÓRIO.
+  Use esta ferramenta para extrair insights sobre o consumo de energia trifásico,
+  qualidade da energia e anomalias. O sistema monitora 3 fases (fase1, fase2, fase3).
+  
+  Ações disponíveis:
+  - 'consumo_total': Consumo acumulado (kWh) por fase.
+  - 'picos_demanda': Momentos de maior estresse (kW) e horários de pico.
+  - 'saude_eletrica': Fator de Potência e eficiência energética.
+  - 'perfil_horario': Média de consumo por hora do dia (00h-23h).
+  - 'desbalanceamento': Diferença de corrente (Amperes) entre as fases.
+  - 'anomalias_voltagem': Lista eventos de sub/sobretensão perigosos.
+
+  Os períodos aceitos são: 
+  'ultimos_30_dias', 'ultimos_7_dias', 'ultimos_3_dias', 
+  'ontem', 'semana_passada', 'mes_passado'.
+  """,
 )
-async def DataAccess(
+def DataAccess(
   action: Annotated[
     Literal[
-      "get_consumption_distribution",
-      "get_daily_consumption",
-      "get_power_readings_by_device",
-      "get_power_factor_analysis",
+      "consumo_total",
+      "picos_demanda",
+      "saude_eletrica",
+      "perfil_horario",
+      "desbalanceamento",
+      "anomalias_voltagem"
     ],
-    "Este campo identifica a ação específica que você deseja realizar.",
+    "A análise específica a ser realizada nos dados elétricos.",
   ],
   period: Annotated[
-    Literal["yesterday", "last_week", "last_month", "last_year"],
-    """O período de tempo para o qual você deseja recuperar os dados. Use
-    'yesterday' para dados do dia anterior, 'last_week' para a última semana,
-    'last_month' para o último mês e 'last_year' para o último ano.""",
+    Literal[
+      "ultimos_30_dias", "ultimos_7_dias", "ultimos_3_dias",
+      "ontem", "semana_passada", "mes_passado"
+    ],
+    "A janela temporal para análise.",
   ],
   should_plot: Annotated[
     bool,
-    """Indica se o usuário também solicitou a exibição de um gráfico exibindo
-    os dados retornados. Use True se o usuário deixou claro que gostaria de ver
-    os dados plotados em gráficos, caso contrário, use False.""",
-  ],
-  device_id: Annotated[
-    int | None,
-    """O ID do dispositivo para o qual você deseja realizar a análise do fator de
-    potência. Este campo é obrigatório apenas se a ação for 'get_power_factor_analysis'.""",
-  ] = None,
-):
-  ## Distribuição de consumo por tipo de aparelho
-  logger.info(f"DataAccess tool called with action: {action}, period: {period}, should_plot: {should_plot}, device_id: {device_id}")
-  if action == "get_consumption_distribution":
-    if period not in ["yesterday", "last_week", "last_month"]:
-      raise ValueError("Período inválido para get_consumption_distribution.")
+    "Se True, gera e salva um gráfico. Defina como True sempre que o usuário pedir 'ver', 'plotar', 'gráfico' ou 'visualizar'.",
+  ] = False,
+) -> str:
     
-    period = cast(Literal["yesterday", "last_week", "last_month"], period)
-    response = await get_consumption_distribution(period)
-    
-    if response.get("error"):
-      logger.error(f"Error occurred while fetching consumption distribution: {response['error']}")
-      return response["error"]
-    
-    str_response = ", ".join([f"{tipo}: {valor:.1f} kWh" for tipo, valor in response.items()])
-    
-    if len(str_response) > 500:
-      logger.warning("Resposta muito longa, truncando.")
-      str_response = str_response[:500] + "..."
-      
-    if should_plot:
-      response = cast(dict[str, float], response)
-      plot_path = plot_consumption_distribution(response)
-      return f"Gráfico salvo no caminho: {plot_path}\nDados: {str_response}"
-    else:
-      return str_response
-    
-  ## Consumo diário total de energia
-  elif action == "get_daily_consumption":
-    if period not in ["last_week", "last_month", "last_year"]:
-      raise ValueError("Período inválido para get_daily_consumption.")
-    
-    period = cast(Literal["last_week", "last_month", "last_year"], period)
-    response = await get_daily_consumption(period)
-    
-    if response.get("error"):
-      logger.error(f"Error occurred while fetching daily consumption: {response['error']}")
-      return response["error"]
-    
-    str_response = ", ".join([f"{dia}: {consumo:.1f} kWh" for dia, consumo in response.get("data", [])])
-    
-    if len(str_response) > 500:
-      logger.warning("Resposta muito longa, truncando.")
-      str_response = str_response[:500] + "..."
-    
-    if should_plot:
-      response = cast(list[tuple[str, float]], response["data"])
-      plot_path = plot_daily_consumption(response, period)
-      return f"Gráfico salvo no caminho: {plot_path}\nDados: {str_response}"
-    else:
-      return str_response
-    
-  ## Leituras de potência por aparelho com detecção de outliers
-  elif action == "get_power_readings_by_device":
-    if period not in ["yesterday", "last_week"]:
-      raise ValueError("Período inválido para get_power_readings_by_device.")
-    
-    period = cast(Literal["yesterday", "last_week"], period)
-    response = await get_power_readings_by_device(period)
-    
-    if response.get("error"):
-      logger.error(f"Error occurred while fetching power readings by device: {response['error']}")
-      return response["error"]
-    
-    if not should_plot:
-      return "Gráficos são necessários para esta ação."
-    else:
-      response = cast(list[tuple[str, float]], response["data"])
-      plot_path = plot_power_outliers(response, period)
-      return f"Gráfico salvo no caminho: {plot_path}"
+  logger.info(f"DataAccess tool called: action={action}, period={period}, plot={should_plot}")
 
-  ## Análise do fator de potência para um aparelho específico
-  elif action == "get_power_factor_analysis":
-    if period not in ["last_week", "last_month"]:
-      raise ValueError("Período inválido para get_power_factor_analysis.")
-    if device_id is None:
-      raise ValueError("device_id é obrigatório para get_power_factor_analysis.")
-    
-    period = cast(Literal["last_week", "last_month"], period)
-    response = await get_power_factor_analysis(device_id, period)
-    
-    if response.get("error"):
-      logger.error(f"Error occurred while fetching power factor analysis: {response['error']}")
-      return response["error"]
-    
-    if not should_plot:
-      return "Gráficos são necessários para esta ação."
-    else: 
-      response = cast(list[tuple[str, float, str]], response["data"])
-      plot_path = plot_power_factor_analysis(response)
-      return f"Gráfico salvo no caminho: {plot_path}"
+  try:
+    # --- Consumo Total ---
+    if action == "consumo_total":
+      data = monitor.get_consumo_total_kwh(period)
+      # Formata texto para o LLM
+      summary = "\n".join([f"- {d['fase']}: {d['total_kwh']} kWh (Max Demand: {d['max_demand_kw']} kW)" for d in data])
+      
+      result_msg = f"Resumo do Consumo ({period}):\n{summary}"
+      
+      if should_plot:
+        path = plot_consumo_total_kwh(data, period)
+        result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
+      return result_msg
+
+    # --- Picos de Demanda ---
+    elif action == "picos_demanda":
+      data = monitor.get_picos_demanda(period)
+      summary = "\n".join([f"- {d['fase']}: Pico de {d['pico_kw']} kW em {d['momento']}" for d in data])
+      
+      result_msg = f"Picos de Demanda Registrados ({period}):\n{summary}"
+      
+      if should_plot:
+        path = plot_picos_demanda(data, period)
+        result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
+      return result_msg
+
+    # --- Saúde Elétrica (Fator de Potência) ---
+    elif action == "saude_eletrica":
+      data = monitor.get_saude_eletrica(period)
+      summary = "\n".join([
+        f"- {d['fase']}: FP Médio {d['fator_potencia_medio']} (Voltagem Média: {d['voltagem_media']}V)" 
+        for d in data
+      ])
+      
+      result_msg = f"Análise de Eficiência/Fator de Potência ({period}):\n{summary}\nNota: FP ideal deve ser > 0.92."
+      
+      if should_plot:
+        path = plot_saude_eletrica(data, period)
+        result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
+      return result_msg
+
+    # --- Perfil Horário ---
+    elif action == "perfil_horario":
+      data = monitor.get_perfil_horario(period)
+      # Como são muitos dados (24 horas), retornamos apenas um resumo dos picos para o texto do LLM
+      # mas o gráfico mostrará tudo.
+      maior_hora = max(data, key=lambda x: x['media_geral_kw'])
+      menor_hora = min(data, key=lambda x: x['media_geral_kw'])
+      
+      summary = (f"Resumo do Perfil Diário:\n"
+                  f"- Horário de Maior Consumo: {maior_hora['hora']} com média geral de {maior_hora['media_geral_kw']} kW\n"
+                  f"- Horário de Menor Consumo: {menor_hora['hora']} com média geral de {menor_hora['media_geral_kw']} kW")
+      
+      result_msg = f"Perfil de Carga Horária ({period}):\n{summary}"
+      
+      if should_plot:
+        path = plot_perfil_horario(data, period)
+        result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
+      return result_msg
+
+    # --- Desbalanceamento ---
+    elif action == "desbalanceamento":
+      data = monitor.get_desbalanceamento(period)
+      d = data[0] # Unico registro
+      
+      summary = (f"- Correntes Médias: F1={d['avg_amp_f1']}A, F2={d['avg_amp_f2']}A, F3={d['avg_amp_f3']}A\n"
+                  f"- Diferença Máxima entre fases: {d['diferenca_max_amperes']} Amperes")
+      
+      result_msg = f"Análise de Desbalanceamento ({period}):\n{summary}"
+      
+      if should_plot:
+        path = plot_desbalanceamento(data, period)
+        result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
+      return result_msg
+
+    # --- Anomalias ---
+    elif action == "anomalias_voltagem":
+      data = monitor.get_anomalias_voltagem(period)
+      
+      if not data:
+        result_msg = f"Nenhuma anomalia de voltagem detectada em {period}. O sistema está estável."
+      else:
+        qtd = len(data)
+        top_3 = data[:3]
+        details = "\n".join([f"- [{x['timestamp']}] {x['sensor']}: {x['voltage']}V ({x['tipo']} {x['desvio_pct']}%)" for x in top_3])
+        result_msg = f"ALERTA: Foram detectadas {qtd} anomalias de tensão em {period}.\nÚltimas 3 ocorrências:\n{details}"
+
+      if should_plot:
+        path = plot_anomalias_voltagem(data, period)
+        result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
+      return result_msg
+
+    else:
+      return "Ação desconhecida."
+
+  except Exception as e:
+    error_msg = f"Erro ao executar DataAccess: {str(e)}"
+    logger.error(error_msg)
+    return error_msg
