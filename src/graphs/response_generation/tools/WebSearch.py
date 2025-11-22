@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
   name_or_callable="WebSearch",
   description="""Você deve chamar essa função no caso do usuário solicitar informações
   atuais da internet, como notícias, eventos recentes, ou qualquer informação
-  que possa ter mudado recentemente"""
+  que possa ter mudado recentemente.
+  Sempre informe ao usuário as fontes que você usou para a sua resposta. As fontes
+  relevantes devem apenas ser listadas no final da resposta, em uma seção chamada 'Fontes'.
+  Índices de chamada não devem ser adicionados ao texto, visto que não são bem
+  renderizados no chat."""
 )
 async def WebSearch(
   query: Annotated[

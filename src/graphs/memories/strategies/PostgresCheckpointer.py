@@ -70,16 +70,17 @@ class PostgresCheckpointer(BaseCheckpointer):
     await self.pool.open()
 
   async def reset_thread(self, thread_id):
-    logger.info(f"Resetting thread [{thread_id}] in PostgresCheckpointer")
+    thread_id_str = str(thread_id)
+    logger.info(f"Resetting thread [{thread_id_str}] in PostgresCheckpointer")
     async with self.pool.connection() as conn:
       await conn.execute(
-        "DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,)
+        "DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id_str,)
       )
       await conn.execute(
-        "DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id,)
+        "DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id_str,)
       )
       await conn.execute(
-        "DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,)
+        "DELETE FROM checkpoints WHERE thread_id = %s", (thread_id_str,)
       )
       await conn.commit()
-    logger.info(f"Thread [{thread_id}] reset in PostgresCheckpointer")
+    logger.info(f"Thread [{thread_id_str}] reset in PostgresCheckpointer")

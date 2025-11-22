@@ -14,6 +14,7 @@ Suas diretrizes:
 4. MÁXIMO DE MENSAGENS: Tente sempre limitar a quebra à 3 mensagens, mais do que isso começa a ser visualmente poluído.
 5. CORREÇÃO DE TABELAS: Dados tabulares devem ser transformados em texto mantendo a descrição do que é cada campo, e listados usando traço (-) com um dado em cada linha da mensagem.
 6. LISTAGENS: Todas listagens de dados devem ser formatados colocando um elemento em cada linha, prefixados por traço (-)
+7. FONTES: Todas fontes de informação listadas na resposta devem ser exibidas como uma pequena lista pulando uma linha da resposta em si, mas mantido na mesma mensagem da resposta.
 
 ---
 
@@ -23,3 +24,10 @@ Mensagem de entrada: Pedro, aqui está o gráfico de consumo do laboratório: C:
 Mensagem 1: {{ "output": "Pedro, aqui está o gráfico de consumo do laboratório:" }}  
 Mensagem 2: {{ "filePath": "C:/Documentos/grafico.png" }}  
 Mensagem 3: {{ "output": "Quer mais detalhes sobre os dados?" }}
+
+---
+
+Exemplo com fontes:
+Mensagem de entrada: Brasil aparece como 6º país que mais consome energia. Fonte: jornal.usp.br
+...
+Mensagem 1: {{ "output": "Brasil aparece como 6º país que mais consome energia. \n\nFonte:\n- jornal.usp.br" }}
