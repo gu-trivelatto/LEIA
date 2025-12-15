@@ -51,6 +51,8 @@ class MemorySettings(BaseModel):
   
 
 class ReadingsDatabaseSettings(BaseModel):
+  MEASUREMENT_API_URL: str
+  MQTT_CHANNEL: str
   URL: SecretStr
 
 

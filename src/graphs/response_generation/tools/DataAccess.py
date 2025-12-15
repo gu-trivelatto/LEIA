@@ -16,7 +16,7 @@ from src.services.Plotter import (
 logger = logging.getLogger(__name__)
 
 # Instância global do monitor (ou poderia ser injetada)
-monitor = DataAccessRepository("laboratorio_mock.db")
+monitor = DataAccessRepository()
 
 @tool(
   name_or_callable="DataAccess",
@@ -35,7 +35,7 @@ monitor = DataAccessRepository("laboratorio_mock.db")
 
   Os períodos aceitos são: 
   'ultimos_30_dias', 'ultimos_7_dias', 'ultimos_3_dias', 
-  'ontem', 'semana_passada', 'mes_passado'.
+  'ontem', 'semana_passada', 'mes_passado', 'hoje', 'tudo'.
   """,
 )
 def DataAccess(
@@ -53,13 +53,13 @@ def DataAccess(
   period: Annotated[
     Literal[
       "ultimos_30_dias", "ultimos_7_dias", "ultimos_3_dias",
-      "ontem", "semana_passada", "mes_passado"
+      "ontem", "semana_passada", "mes_passado", "hoje", "tudo"
     ],
     "A janela temporal para análise.",
   ],
   should_plot: Annotated[
     bool,
-    "Se True, gera e salva um gráfico. Defina como True sempre que o usuário pedir 'ver', 'plotar', 'gráfico' ou 'visualizar'.",
+    "Se True, gera e salva um gráfico. Defina como True sempre que o usuário pedir 'ver', 'plotar', 'gráfico', 'visualizar' ou similares.",
   ] = False,
 ) -> str:
     
