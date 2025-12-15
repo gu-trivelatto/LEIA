@@ -39,6 +39,7 @@ def validate_input(chat_input: str) -> None:
 async def invoke_response_generation_graph(
   graph: CompiledStateGraph[MainState, None, InputState, OutputState],
   chat_id: int,
+  message_id: int,
   phone_number: str,
   user_name: str,
   user_input: str,
@@ -52,6 +53,7 @@ async def invoke_response_generation_graph(
     state: InputState = {
       "chat_input": user_input,
       "chat_id": chat_id,
+      "message_id": message_id,
       "phone_number": phone_number,
       "user_name": user_name
     }

@@ -94,6 +94,7 @@ def interpret_image(image: bytearray) -> str:
 
 async def process_input(message: Message) -> InputState:
   chat_id = message.chat.id
+  message_id = message.message_id
   phone_number = message.contact.phone_number if message.contact else ""
   if message.text:
     chat_input = message.text
@@ -121,6 +122,7 @@ async def process_input(message: Message) -> InputState:
   return InputState(
     chat_input=chat_input,
     chat_id=chat_id,
+    message_id=message_id,
     phone_number=phone_number,
     user_name=user_name,
   )

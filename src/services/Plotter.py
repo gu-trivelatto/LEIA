@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 # Garante que o diretório existe
 os.makedirs("data/plots", exist_ok=True)
 
-def plot_consumo_total_kwh(data: list[dict], periodo: str) -> str:
+
+
+def plot_consumo_total_kwh(data: list[dict], periodo: str, message_id: int) -> str:
   """
   Gera um gráfico de barras comparando o consumo acumulado (kWh) entre as fases.
   Input esperado: Output de get_consumo_total_kwh
@@ -38,7 +40,7 @@ def plot_consumo_total_kwh(data: list[dict], periodo: str) -> str:
     fig.update_traces(textposition='outside')
     fig.update_layout(yaxis_title="Energia Acumulada (kWh)")
 
-    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(message_id)}.png"
     fig.write_image(plot_path)
     return plot_path
   except Exception as e:
@@ -46,7 +48,7 @@ def plot_consumo_total_kwh(data: list[dict], periodo: str) -> str:
     return "Erro ao gerar gráfico."
 
 
-def plot_picos_demanda(data: list[dict], periodo: str) -> str:
+def plot_picos_demanda(data: list[dict], periodo: str, message_id: int) -> str:
   """
   Gera um gráfico de dispersão mostrando QUANDO e QUANTO foi o pico de cada fase.
   Input esperado: Output de get_picos_demanda
@@ -74,7 +76,7 @@ def plot_picos_demanda(data: list[dict], periodo: str) -> str:
     fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
     fig.update_traces(marker=dict(line=dict(width=2, color='DarkSlateGrey')))
 
-    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(message_id)}.png"
     fig.write_image(plot_path)
     return plot_path
   except Exception as e:
@@ -82,7 +84,7 @@ def plot_picos_demanda(data: list[dict], periodo: str) -> str:
     return "Erro ao gerar gráfico."
 
 
-def plot_saude_eletrica(data: list[dict], periodo: str) -> str:
+def plot_saude_eletrica(data: list[dict], periodo: str, message_id: int) -> str:
   """
   Gera um gráfico de barras do Fator de Potência com uma linha de corte em 0.92 (multa).
   Input esperado: Output de get_saude_eletrica
@@ -112,7 +114,7 @@ def plot_saude_eletrica(data: list[dict], periodo: str) -> str:
     
     fig.update_layout(yaxis_title="Fator de Potência Médio", yaxis_range=[0.5, 1.1])
 
-    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(message_id)}.png"
     fig.write_image(plot_path)
     return plot_path
   except Exception as e:
@@ -120,7 +122,7 @@ def plot_saude_eletrica(data: list[dict], periodo: str) -> str:
     return "Erro ao gerar gráfico."
 
 
-def plot_perfil_horario(data: list[dict], periodo: str) -> str:
+def plot_perfil_horario(data: list[dict], periodo: str, message_id: int) -> str:
   """
   Gera um gráfico de linhas multivariado mostrando o consumo ao longo das horas do dia (00-23h).
   Input esperado: Output de get_perfil_horario
@@ -149,7 +151,7 @@ def plot_perfil_horario(data: list[dict], periodo: str) -> str:
                                           legendgroup=new_names[t.name],
                                           hovertemplate=t.hovertemplate.replace(t.name, new_names[t.name])))
 
-    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(message_id)}.png"
     fig.write_image(plot_path)
     return plot_path
   except Exception as e:
@@ -157,7 +159,7 @@ def plot_perfil_horario(data: list[dict], periodo: str) -> str:
     return "Erro ao gerar gráfico."
 
 
-def plot_desbalanceamento(data: list[dict], periodo: str) -> str:
+def plot_desbalanceamento(data: list[dict], periodo: str, message_id: int) -> str:
   """
   Gera um gráfico comparativo das correntes (Amperes) para visualizar desbalanceamento.
   Input esperado: Output de get_desbalanceamento (lista com 1 dict)
@@ -196,7 +198,7 @@ def plot_desbalanceamento(data: list[dict], periodo: str) -> str:
     )
     
     fig.update_traces(textposition='outside')
-    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(message_id)}.png"
     fig.write_image(plot_path)
     return plot_path
   except Exception as e:
@@ -204,7 +206,7 @@ def plot_desbalanceamento(data: list[dict], periodo: str) -> str:
     return "Erro ao gerar gráfico."
 
 
-def plot_anomalias_voltagem(data: list[dict], periodo: str) -> str:
+def plot_anomalias_voltagem(data: list[dict], periodo: str, message_id: int) -> str:
   """
   Gera um gráfico timeline mostrando eventos de sub/sobretensão.
   Input esperado: Output de get_anomalias_voltagem
@@ -241,7 +243,7 @@ def plot_anomalias_voltagem(data: list[dict], periodo: str) -> str:
     
     fig.update_layout(yaxis_title="Voltagem (V)")
 
-    plot_path = f"data/plots/{str(uuid.uuid4())}.png"
+    plot_path = f"data/plots/{str(message_id)}.png"
     fig.write_image(plot_path)
     return plot_path
   except Exception as e:

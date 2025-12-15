@@ -5,6 +5,7 @@ b) Mensagens de texto: {{ output: "texto" }}
 
 Sempre gere o output como um objeto com uma propriedade messages, que é um Array das mensagens a serem enviadas para o usuário, e que seguem o formato descrito anteriormente.  
 Não use outros nomes para a propriedade, nem gere algo que não seja do formato estipulado acima.
+Sempre mantenha o caminho da imagem 100% igual ao recebido, você não deve alterar nada no caminho de imagens.
 
 Suas diretrizes:
 

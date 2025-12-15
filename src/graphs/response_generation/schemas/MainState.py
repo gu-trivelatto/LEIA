@@ -7,6 +7,7 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 class MainState(AgentState):
   chat_input: str
   chat_id: int
+  message_id: int
   phone_number: str
   user_name: str
   formatted_output: NotRequired[list[dict[str, str]]]
@@ -16,6 +17,7 @@ class MainState(AgentState):
 class InputState(TypedDict):
   chat_input: str
   chat_id: int
+  message_id: int
   phone_number: str
   user_name: str
 

@@ -32,6 +32,7 @@ async def generate_and_send_response(
     replies = await GraphService.invoke_response_generation_graph(
       graph,
       processed_input["chat_id"],
+      processed_input["message_id"],
       processed_input["phone_number"],
       processed_input["user_name"],
       processed_input["chat_input"],
@@ -42,7 +43,14 @@ async def generate_and_send_response(
       logger.info(f"Sending message to chat ID {processed_input['chat_id']}")
       await bot.send_message(chat_id=processed_input["chat_id"], text=reply["output"])
     elif reply.get("filePath"):
+      path = f"data/plots/{str(processed_input['message_id'])}.png"
       logger.info(f"Sending image with path {reply['filePath']} to chat ID {processed_input['chat_id']}")
-      await bot.send_photo(chat_id=processed_input["chat_id"], photo=open(reply["filePath"], 'rb'))
+      try:
+        await bot.send_photo(chat_id=processed_input["chat_id"], photo=open(reply["filePath"], 'rb'))
+      except Exception:
+        logger.error(f"Failed to send image with path {reply['filePath']} to chat ID {processed_input['chat_id']}")
+        logger.info(f"Trying again with message ID based path {path}")
+        await bot.send_photo(chat_id=processed_input["chat_id"], photo=open(path, 'rb'))
+      
   
   return
