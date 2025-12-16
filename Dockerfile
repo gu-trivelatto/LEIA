@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
 # Adicionamos bibliotecas cruciais que costumam faltar no slim:
 # libxshmfence1, libglu1-mesa, libx11-xcb1, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
+    chromium-headless-shell \
     fonts-liberation \
     libnss3 \
     libasound2 \
