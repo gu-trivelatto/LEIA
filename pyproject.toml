@@ -33,7 +33,7 @@ dependencies = [
     "gspread>=6.1.4",
     "google-auth>=2.36.0",
     "google-api-python-client>=2.187.0",
-    "vl-convert-python>=1.0.0",
+    "kaleido>=1.2.0",
 ]
 
 [tool.ruff]

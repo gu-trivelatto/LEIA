@@ -41,7 +41,7 @@ def plot_consumo_total_kwh(data: list[dict], periodo: str, image_name: str) -> s
     fig.update_layout(yaxis_title="Energia Acumulada (kWh)")
 
     plot_path = f"data/plots/{image_name}.png"
-    fig.write_image(plot_path, engine="vl-convert")
+    fig.write_image(plot_path)
     return plot_path
   except Exception as e:
     logger.error(f"Error in plot_consumo_total_kwh: {e}")
@@ -77,7 +77,7 @@ def plot_picos_demanda(data: list[dict], periodo: str, image_name: str) -> str:
     fig.update_traces(marker=dict(line=dict(width=2, color='DarkSlateGrey')))
 
     plot_path = f"data/plots/{image_name}.png"
-    fig.write_image(plot_path, engine="vl-convert")
+    fig.write_image(plot_path)
     return plot_path
   except Exception as e:
     logger.error(f"Error in plot_picos_demanda: {e}")
@@ -115,7 +115,7 @@ def plot_saude_eletrica(data: list[dict], periodo: str, image_name: str) -> str:
     fig.update_layout(yaxis_title="Fator de Potência Médio", yaxis_range=[0.5, 1.1])
 
     plot_path = f"data/plots/{image_name}.png"
-    fig.write_image(plot_path, engine="vl-convert")
+    fig.write_image(plot_path)
     return plot_path
   except Exception as e:
     logger.error(f"Error in plot_saude_eletrica: {e}")
@@ -152,7 +152,7 @@ def plot_perfil_horario(data: list[dict], periodo: str, image_name: str) -> str:
                                           hovertemplate=t.hovertemplate.replace(t.name, new_names[t.name])))
 
     plot_path = f"data/plots/{image_name}.png"
-    fig.write_image(plot_path, engine="vl-convert")
+    fig.write_image(plot_path)
     return plot_path
   except Exception as e:
     logger.error(f"Error in plot_perfil_horario: {e}")
@@ -199,7 +199,7 @@ def plot_desbalanceamento(data: list[dict], periodo: str, image_name: str) -> st
     
     fig.update_traces(textposition='outside')
     plot_path = f"data/plots/{image_name}.png"
-    fig.write_image(plot_path, engine="vl-convert")
+    fig.write_image(plot_path)
     return plot_path
   except Exception as e:
     logger.error(f"Error in plot_desbalanceamento: {e}")
@@ -221,7 +221,7 @@ def plot_anomalias_voltagem(data: list[dict], periodo: str, image_name: str) -> 
                           xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False, font=dict(size=20, color="green"))
       fig.update_layout(title=f"Registro de Anomalias ({periodo.replace('_', ' ').title()})")
       plot_path = f"data/plots/{str(uuid.uuid4())}.png"
-      fig.write_image(plot_path, engine="vl-convert")
+      fig.write_image(plot_path)
       return plot_path
 
     df = pd.DataFrame(data)
@@ -244,7 +244,7 @@ def plot_anomalias_voltagem(data: list[dict], periodo: str, image_name: str) -> 
     fig.update_layout(yaxis_title="Voltagem (V)")
 
     plot_path = f"data/plots/{image_name}.png"
-    fig.write_image(plot_path, engine="vl-convert")
+    fig.write_image(plot_path)
     return plot_path
   except Exception as e:
     logger.error(f"Error in plot_anomalias_voltagem: {e}")

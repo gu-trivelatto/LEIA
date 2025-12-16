@@ -1,30 +1,38 @@
-# Usa a imagem oficial do uv com Python 3.12 (Slim - Leve)
-# Não precisamos mais da versão full/bookworm nem de chromium!
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# 1. Usamos a imagem FULL do Debian 12 (Bookworm)
+# Essa imagem é maior, mas tem as libs de sistema (glibc, openssl, etc) completas.
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm
 
-# Configurações de otimização do Python
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-# 1. Preparação do Usuário (Segurança)
-# Não precisamos instalar NADA de sistema (apt-get) para o vl-convert rodar.
+# 2. Instalação de Infraestrutura Gráfica
+# Instalamos o Chromium do sistema para garantir que TODAS as libs compartilhadas (.so)
+# necessárias para renderização existam. Também instalamos fontes para os gráficos não ficarem com quadrados.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-liberation \
+    libnss3 \
+    libgbm1 \
+    libasound2 \
+    tini \
+    && rm -rf /var/lib/apt/lists/*
+
+# 3. Configuração de Usuário (Segurança)
 RUN useradd -m -u 1000 leia_user && \
     mkdir -p /app && \
     chown -R leia_user:leia_user /app
 
 WORKDIR /app
 
-# 2. Troca para usuário não-root
+# 4. Troca para usuário não-root
 USER leia_user
 
-# 3. Instalação de Dependências
-# O vl-convert é um binário Rust que vem dentro do wheel do Python.
-# O uv vai instalar ele aqui.
+# 5. Instalação de Dependências Python
 COPY --chown=leia_user:leia_user pyproject.toml uv.lock* ./
 RUN uv sync --frozen --no-install-project --no-dev
 
-# 4. Cópia do Código Fonte
+# 6. Cópia do Código
 COPY --chown=leia_user:leia_user . .
 RUN uv sync --frozen --no-dev
 
@@ -33,5 +41,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
-# Comando padrão
+# 7. Entrypoint com Tini
+# O Tini gerencia os processos do Chromium para evitar zumbis e crashes silenciosos
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
 CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
