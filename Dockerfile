@@ -26,8 +26,8 @@ RUN apk add --no-cache \
 # 3. Configuração do DBus (Essencial!)
 # O DBus precisa de um machine-id gerado para iniciar.
 # Fazemos isso como root antes de mudar de usuário.
+RUN mkdir -p /run/dbus
 RUN dbus-uuidgen > /var/lib/dbus/machine-id
-
 RUN dbus-daemon --system --nofork --nopidfile &
 
 # 4. Configuração de Usuário
