@@ -20,15 +20,7 @@ RUN apk add --no-cache \
     font-noto-emoji \
     harfbuzz \
     nss \
-    ca-certificates \
-    dbus
-
-# 3. Configuração do DBus (Essencial!)
-# O DBus precisa de um machine-id gerado para iniciar.
-# Fazemos isso como root antes de mudar de usuário.
-RUN dbus-uuidgen > /var/lib/dbus/machine-id
-
-RUN dbus-daemon --system --nofork --nopidfile &
+    ca-certificates
 
 # 4. Configuração de Usuário
 RUN adduser -D -u 1000 -h /app leia_user
@@ -54,4 +46,4 @@ EXPOSE 8000
 # Usamos 'dbus-run-session --' antes do comando.
 # Isso inicia o daemon do dbus, configura o ENV DBUS_SESSION_BUS_ADDRESS
 # e executa o uvicorn dentro dessa sessão.
-CMD ["dbus-run-session", "--", "uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
