@@ -10,13 +10,23 @@ ENV PYTHONUNBUFFERED=1 \
 # Instalamos o Chromium do sistema para garantir que TODAS as libs compartilhadas (.so)
 # necessárias para renderização existam. Também instalamos fontes para os gráficos não ficarem com quadrados.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
     fonts-liberation \
     libnss3 \
     libgbm1 \
     libasound2 \
     tini \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify Chrome installation
+RUN ls -la /usr/bin/google-chrome* && \
+    google-chrome --version
 
 # 3. Configuração de Usuário (Segurança)
 RUN useradd -m -u 1000 leia_user && \
