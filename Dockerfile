@@ -8,9 +8,9 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     # Define onde o navegador está para bibliotecas como Selenium/Playwright/Pyppeteer
-    BROWSER_PATH="/usr/bin/chromium-browser" \
-    CHROME_BIN="/usr/bin/chromium-browser" \
-    CHROME_PATH="/usr/bin/chromium-browser"
+    BROWSER_PATH="/usr/bin/chromium-headless-shell" \
+    CHROME_BIN="/usr/bin/chromium-headless-shell" \
+    CHROME_PATH="/usr/bin/chromium-headless-shell"
 
 # 2. Instalação de Infraestrutura (APK)
 # - python3: Necessário pois o Alpine vem zerado
@@ -19,7 +19,7 @@ ENV PYTHONUNBUFFERED=1 \
 # --no-cache: Para não guardar cache de instalador e manter a imagem pequena
 RUN apk add --no-cache \
     python3 \
-    chromium \
+    chromium-headless-shell \
     freetype \
     ttf-freefont \
     font-noto-emoji \

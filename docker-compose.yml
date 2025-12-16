@@ -12,9 +12,9 @@ services:
     environment:
       - MEMORY__URL=postgresql://postgres:postgres@db:5432/leia_db
       - MEMORY__DISABLE_MIGRATIONS=False
-      - BROWSER_PATH=/usr/bin/chromium-browser
-      - CHROME_BIN=/usr/bin/chromium-browser
-      - CHROME_PATH=/usr/bin/chromium-browser
+      - BROWSER_PATH=/usr/bin/chromium-headless-shell
+      - CHROME_BIN=/usr/bin/chromium-headless-shell
+      - CHROME_PATH=/usr/bin/chromium-headless-shell
     volumes:
       - ./data/plots:/app/data/plots
     # --- NOVAS LINHAS CRUCIAIS ---
