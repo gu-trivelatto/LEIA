@@ -10,7 +10,6 @@ services:
     env_file:
       - .env
     environment:
-      DBUS_SESSION_BUS_ADDRESS: "disabled:"
       MEMORY__URL: "postgresql://postgres:postgres@db:5432/leia_db"
       MEMORY__DISABLE_MIGRATIONS: "False"
       BROWSER_PATH: "/usr/bin/chromium-headless-shell"
