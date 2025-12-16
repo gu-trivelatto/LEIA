@@ -1,0 +1,54 @@
+services:
+  # Serviço da Aplicação (LEIA)
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: leia_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    # Carrega as variáveis do arquivo .env
+    env_file:
+      - .env
+    # Força a sobrescrita do HOST caso esteja diferente no .env
+    environment:
+      - MEMORY__URL=postgresql://postgres:postgres@db:5432/leia_db
+      - MEMORY__DISABLE_MIGRATIONS=False
+    volumes:
+      - ./data/plots:/app/data/plots
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - leia_network
+
+  # Serviço do Banco de Dados (Postgres)
+  db:
+    image: postgres:15-alpine
+    container_name: leia_db
+    restart: always
+    # Mapeia as variáveis do .env para as que a imagem do Postgres espera
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: leia_db
+    ports:
+      - "5440:5432" # Opcional: só exponha se quiser acessar o banco via DBeaver/PgAdmin do seu PC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - leia_network
+    # Healthcheck para garantir que a API só inicie quando o banco estiver pronto
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d leia_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  leia_network:
+    driver: bridge

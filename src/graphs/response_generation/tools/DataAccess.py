@@ -68,7 +68,7 @@ def DataAccess(
 ) -> str:
     
   logger.info(f"DataAccess tool called: action={action}, period={period}, plot={should_plot}")
-  message_id = state.get("message_id")
+  img_name = f"{state.get("chat_id")}_{state.get("message_id")}"
 
   try:
     # --- Consumo Total ---
@@ -80,7 +80,7 @@ def DataAccess(
       result_msg = f"Resumo do Consumo ({period}):\n{summary}"
       
       if should_plot:
-        path = plot_consumo_total_kwh(data, period, message_id)
+        path = plot_consumo_total_kwh(data, period, img_name)
         result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
       return result_msg
 
@@ -92,7 +92,7 @@ def DataAccess(
       result_msg = f"Picos de Demanda Registrados ({period}):\n{summary}"
       
       if should_plot:
-        path = plot_picos_demanda(data, period, message_id)
+        path = plot_picos_demanda(data, period, img_name)
         result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
       return result_msg
 
@@ -107,7 +107,7 @@ def DataAccess(
       result_msg = f"Análise de Eficiência/Fator de Potência ({period}):\n{summary}\nNota: FP ideal deve ser > 0.92."
       
       if should_plot:
-        path = plot_saude_eletrica(data, period, message_id)
+        path = plot_saude_eletrica(data, period, img_name)
         result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
       return result_msg
 
@@ -126,7 +126,7 @@ def DataAccess(
       result_msg = f"Perfil de Carga Horária ({period}):\n{summary}"
       
       if should_plot:
-        path = plot_perfil_horario(data, period, message_id)
+        path = plot_perfil_horario(data, period, img_name)
         result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
       return result_msg
 
@@ -141,7 +141,7 @@ def DataAccess(
       result_msg = f"Análise de Desbalanceamento ({period}):\n{summary}"
       
       if should_plot:
-        path = plot_desbalanceamento(data, period, message_id)
+        path = plot_desbalanceamento(data, period, img_name)
         result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
       return result_msg
 
@@ -158,7 +158,7 @@ def DataAccess(
         result_msg = f"ALERTA: Foram detectadas {qtd} anomalias de tensão em {period}.\nÚltimas 3 ocorrências:\n{details}"
 
       if should_plot:
-        path = plot_anomalias_voltagem(data, period, message_id)
+        path = plot_anomalias_voltagem(data, period, img_name)
         result_msg += f"\n\n[GRÁFICO GERADO]: {path}"
       return result_msg
 
