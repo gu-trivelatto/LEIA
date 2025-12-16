@@ -16,7 +16,7 @@ services:
       - ./data/plots:/app/data/plots
     # --- NOVAS LINHAS CRUCIAIS ---
     # Aumenta a memória compartilhada para o Chrome não crashar
-    shm_size: '2gb' 
+    shm_size: '1gb' 
     # Garante que o container tenha um init process (redundância com o Tini, mas boa prática)
     init: true
     # -----------------------------
