@@ -10,7 +10,6 @@ ENV PYTHONUNBUFFERED=1 \
 # Instalamos o Chromium do sistema para garantir que TODAS as libs compartilhadas (.so)
 # necessárias para renderização existam. Também instalamos fontes para os gráficos não ficarem com quadrados.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
     fonts-liberation \
     libnss3 \
     libgbm1 \
@@ -31,6 +30,7 @@ USER leia_user
 # 5. Instalação de Dependências Python
 COPY --chown=leia_user:leia_user pyproject.toml uv.lock* ./
 RUN uv sync --frozen --no-install-project --no-dev
+RUN kaleido_get_chrome
 
 # 6. Cópia do Código
 COPY --chown=leia_user:leia_user . .
