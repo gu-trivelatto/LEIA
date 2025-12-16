@@ -26,7 +26,6 @@ dependencies = [
     "qdrant-client>=1.15.1",
     "llama-parse>=0.6.54",
     "llama-index>=0.14.4",
-    "llama-index-embeddings-huggingface>=0.6.1",
     "llama-index-llms-langchain>=0.7.1",
     "llama-index-vector-stores-qdrant>=0.8.6",
     "pandas>=2.2.3",
