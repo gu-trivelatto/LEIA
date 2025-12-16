@@ -1,49 +1,37 @@
+# Usa a imagem oficial do uv com Python 3.12 (Slim - Leve)
+# Não precisamos mais da versão full/bookworm nem de chromium!
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
+# Configurações de otimização do Python
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-# --- 1. Instalação de Sistema (Blindada) ---
-# Adicionamos bibliotecas cruciais que costumam faltar no slim:
-# libxshmfence1, libglu1-mesa, libx11-xcb1, etc.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium-headless-shell \
-    fonts-liberation \
-    libnss3 \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libgtk-3-0 \
-    libgbm1 \
-    libxshmfence1 \
-    libx11-xcb1 \
-    libxcb-dri3-0 \
-    libglu1-mesa \
-    tini \
-    && rm -rf /var/lib/apt/lists/*
-
-# --- 2. Preparação do Usuário ---
-RUN useradd -m -u 1000 leia_user
-RUN mkdir /app && chown leia_user:leia_user /app
+# 1. Preparação do Usuário (Segurança)
+# Não precisamos instalar NADA de sistema (apt-get) para o vl-convert rodar.
+RUN useradd -m -u 1000 leia_user && \
+    mkdir -p /app && \
+    chown -R leia_user:leia_user /app
 
 WORKDIR /app
 
-# --- 3. Trocar de usuário ---
+# 2. Troca para usuário não-root
 USER leia_user
 
-# --- 4. Dependências Python ---
+# 3. Instalação de Dependências
+# O vl-convert é um binário Rust que vem dentro do wheel do Python.
+# O uv vai instalar ele aqui.
 COPY --chown=leia_user:leia_user pyproject.toml uv.lock* ./
 RUN uv sync --frozen --no-install-project --no-dev
 
-# --- 5. Código Fonte ---
+# 4. Cópia do Código Fonte
 COPY --chown=leia_user:leia_user . .
 RUN uv sync --frozen --no-dev
 
+# Adiciona o venv ao PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
-# Entrypoint via Tini para evitar processos zumbis do Chrome
-ENTRYPOINT ["/usr/bin/tini", "--"]
-
+# Comando padrão
 CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
