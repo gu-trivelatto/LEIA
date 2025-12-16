@@ -28,6 +28,8 @@ RUN apk add --no-cache \
 # Fazemos isso como root antes de mudar de usuário.
 RUN dbus-uuidgen > /var/lib/dbus/machine-id
 
+RUN dbus-daemon --system --nofork --nopidfile &
+
 # 4. Configuração de Usuário
 RUN adduser -D -u 1000 -h /app leia_user
 
