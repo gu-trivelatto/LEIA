@@ -4,7 +4,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    BROWSER_PATH="/usr/bin/chromium-headless-shell" \
+    CHROME_BIN="/usr/bin/chromium-headless-shell" \
+    CHROME_PATH="/usr/bin/chromium-headless-shell"
 
 RUN apk add --no-cache \
     python3 \
