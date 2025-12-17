@@ -1,4 +1,4 @@
-BOT_TOKEN="99999999:TOKENTOKENTOKENTOKENTOKEN"
+BOT_TOKEN="8396614197:AAGCr-dDIvqD1heIY8z_SqMNIMHWy4nrIxY"
 WEBHOOK_URL="https://anchovy-meet-gradually.ngrok-free.app/telegram/webhook"
 
 curl -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \

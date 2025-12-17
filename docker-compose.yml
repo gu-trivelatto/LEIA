@@ -14,12 +14,7 @@ services:
       - MEMORY__DISABLE_MIGRATIONS=False
     volumes:
       - ./data/plots:/app/data/plots
-    # --- NOVAS LINHAS CRUCIAIS ---
-    # Aumenta a memória compartilhada para o Chrome não crashar
-    shm_size: '1gb' 
-    # Garante que o container tenha um init process (redundância com o Tini, mas boa prática)
     init: true
-    # -----------------------------
     depends_on:
       db:
         condition: service_healthy
@@ -27,7 +22,6 @@ services:
       - leia_network
 
   db:
-    # ... (o resto do db continua igual) ...
     image: postgres:15-alpine
     container_name: leia_db
     restart: always
