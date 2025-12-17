@@ -276,7 +276,7 @@ def plot_anomalias_voltagem(data: list[dict], periodo: str, image_name: str) -> 
 
         # Zona Segura (220V +/- 10% = 198 a 242)
         # Equivalente ao add_hrect
-        ax.axhspan(198, 242, color='green', alpha=0.1, label='Zona Segura (220V ±10%)')
+        ax.axhspan(115, 132, color='green', alpha=0.1, label='Zona Segura (127V ±10%)')
 
         # Scatter plot
         # Mapeando cores manualmente para garantir consistência com o original

@@ -342,7 +342,7 @@ class DataAccessRepository:
       "to_time": to_time,
       "lower_limit": limite_inf,
       "upper_limit": limite_sup,
-      "nominal_voltage": 220,
+      "nominal_voltage": 127,
     }
     response = self._make_request(endpoint, params=params)
 
