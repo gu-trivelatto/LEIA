@@ -21,3 +21,4 @@ build/
 setup_webhook.sh
 data/plots/*.png
 sheets_sa.json
+setup_webhook.sh
