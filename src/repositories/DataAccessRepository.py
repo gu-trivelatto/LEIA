@@ -318,8 +318,8 @@ class DataAccessRepository:
   def get_anomalias_voltagem(
     self,
     periodo: str = "ultimos_7_dias",
-    limite_inf: float = 198,
-    limite_sup: float = 242
+    limite_inf: float = 115,
+    limite_sup: float = 132
   ):
     """
     Retorna lista de eventos onde a voltagem saiu da zona segura.
